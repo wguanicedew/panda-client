@@ -3,14 +3,15 @@ Do NOT import this module in your code.
 Import PBookCore instead.
 """
 
-import os
-import sys
-import code
 import atexit
+import code
+import os
 import signal
+import sys
 import tempfile
 
 from pandaclient.MiscUtils import commands_get_output
+
 try:
     long()
 except Exception:
@@ -19,9 +20,12 @@ except Exception:
 try:
     from concurrent.futures import ThreadPoolExecutor
 except ImportError:
+
     def list_parallel_exec(func, array):
-        return [ func(x) for x in array ]
+        return [func(x) for x in array]
+
 else:
+
     def list_parallel_exec(func, array):
         with ThreadPoolExecutor(8) as thread_pool:
             dataIterator = thread_pool.map(func, array)
@@ -29,20 +33,20 @@ else:
 
 
 import argparse
+import pydoc
 import readline
 
-from pandaclient import Client
-from pandaclient import PandaToolsPkgInfo
+from pandaclient import Client, PandaToolsPkgInfo
 
 # readline support
-readline.parse_and_bind('tab: complete')
-readline.parse_and_bind('set show-all-if-ambiguous On')
+readline.parse_and_bind("tab: complete")
+readline.parse_and_bind("set show-all-if-ambiguous On")
 
 # history support
-pconfDir = os.path.expanduser(os.environ['PANDA_CONFIG_ROOT'])
+pconfDir = os.path.expanduser(os.environ["PANDA_CONFIG_ROOT"])
 if not os.path.exists(pconfDir):
     os.makedirs(pconfDir)
-historyFile = '%s/.history' % pconfDir
+historyFile = "%s/.history" % pconfDir
 # history file
 if os.path.exists(historyFile):
     try:
@@ -53,8 +57,8 @@ if os.path.exists(historyFile):
 readline.set_history_length(1024)
 
 # set dummy CMTSITE
-if 'CMTSITE' not in os.environ:
-    os.environ['CMTSITE'] = ''
+if "CMTSITE" not in os.environ:
+    os.environ["CMTSITE"] = ""
 
 # make tmp dir
 tmpDir = tempfile.mkdtemp()
@@ -65,35 +69,34 @@ Client.setGlobalTmpDir(tmpDir)
 # fork PID
 fork_child_pid = None
 
+
 # exit action
-def _onExit(dirName,hFile):
+def _onExit(dirName, hFile):
     # save history only for master process
     if fork_child_pid == 0:
         readline.write_history_file(hFile)
     # remove tmp dir
-    commands_get_output('rm -rf %s' % dirName)
-atexit.register(_onExit,tmpDir,historyFile)
+    commands_get_output("rm -rf %s" % dirName)
+
+
+atexit.register(_onExit, tmpDir, historyFile)
 
 
 # look for PandaTools package
 for path in sys.path:
-    if path == '':
-        path = '.'
-    if os.path.exists(path) and os.path.isdir(path) and 'pandaclient' in os.listdir(path) \
-           and os.path.exists('%s/pandaclient/__init__.py' % path):
+    if path == "":
+        path = "."
+    if os.path.exists(path) and os.path.isdir(path) and "pandaclient" in os.listdir(path) and os.path.exists("%s/pandaclient/__init__.py" % path):
         # make symlink for module name
-        os.symlink('%s/pandaclient' % path,'%s/taskbuffer' % tmpDir)
+        os.symlink("%s/pandaclient" % path, "%s/taskbuffer" % tmpDir)
         break
-sys.path = [tmpDir]+sys.path
+sys.path = [tmpDir] + sys.path
 
-from pandaclient import PBookCore    # noqa: E402
-
-orig_help = help
+from pandaclient import PBookCore  # noqa: E402
 
 
 # main for interactive session
-def intmain(pbookCore,comString):
-
+def intmain(pbookCore, comString, args_list):
     # help
     def help(*arg):
         """
@@ -105,7 +108,7 @@ def intmain(pbookCore,comString):
                     func = main_locals[arg[0]]
                 else:
                     func = arg[0]
-                orig_help(func)
+                print(pydoc.plain(pydoc.render_doc(func)))
                 return
             except Exception:
                 print("Unknown command : {0}".format(str(arg[0])))
@@ -119,9 +122,11 @@ The following commands are available:
     kill
     retry
     finish
+    debug
     kill_and_retry
     get_user_job_metadata
     recover_lost_files
+    reload_input
     show_workflow
     kill_workflow
     retry_workflow
@@ -132,8 +137,9 @@ The following commands are available:
     list_secrets
     delete_secret
     delete_all_secrets
+    generate_credential
 
-For more info, do help(show) for example
+For more info of each command, e.g. do "help(show)" in interactive mode or "help show" in batch mode.
 """
         print(tmp_str)
 
@@ -167,7 +173,7 @@ For more info, do help(show) for example
         >>> showl(12345678)
         >>> showl(taskname='my_task_name')
         """
-        kwargs['format'] = 'long'
+        kwargs["format"] = "long"
         return pbookCore.show(*args, **kwargs)
 
     # kill
@@ -180,16 +186,16 @@ For more info, do help(show) for example
            >>> kill([123, 345, 567])
            >>> kill('all')
         """
-        if taskIDs == 'all':
+        if taskIDs == "all":
             # active tasks
             task_list = pbookCore.get_active_tasks()
             ret = list_parallel_exec(lambda task: pbookCore.kill(task.jeditaskid), task_list)
         elif isinstance(taskIDs, (list, tuple)):
             ret = list_parallel_exec(lambda taskID: pbookCore.kill(taskID), taskIDs)
         elif isinstance(taskIDs, (int, long)):
-            ret = [ pbookCore.kill(taskIDs) ]
+            ret = [pbookCore.kill(taskIDs)]
         else:
-            print('Error: Invalid argument')
+            print("Error: Invalid argument")
             ret = None
         return ret
 
@@ -207,18 +213,19 @@ For more info, do help(show) for example
            >>> finish([123, 345, 567])
            >>> finish('all')
         """
-        if taskIDs == 'all':
+        if taskIDs == "all":
             # active tasks
             task_list = pbookCore.get_active_tasks()
-            ret = list_parallel_exec(lambda task: pbookCore.finish.original_func(pbookCore,
-                                                                                 task.jeditaskid, soft=soft),
-                                     task_list)
+            ret = list_parallel_exec(
+                lambda task: pbookCore.finish.original_func(pbookCore, task.jeditaskid, soft=soft),
+                task_list,
+            )
         elif isinstance(taskIDs, (list, tuple)):
             ret = list_parallel_exec(lambda taskID: pbookCore.finish(taskID, soft=soft), taskIDs)
         elif isinstance(taskIDs, (int, long)):
-            ret = [ pbookCore.finish(taskIDs, soft=soft) ]
+            ret = [pbookCore.finish(taskIDs, soft=soft)]
         else:
-            print('Error: Invalid argument')
+            print("Error: Invalid argument")
             ret = None
         return ret
 
@@ -253,13 +260,14 @@ For more info, do help(show) for example
             ret = list_parallel_exec(lambda taskID: pbookCore.retry(taskID, newOpts=newOpts), taskIDs)
         elif isinstance(taskIDs, (int, long)):
             ret = [pbookCore.retry(taskIDs, newOpts=newOpts)]
-        elif taskIDs == 'all':
-            dataList = pbookCore.show(status='finished', days=days, limit=limit, sync=True, format='json')
-            ret = list_parallel_exec(lambda data: pbookCore.retry.original_func(pbookCore, data['jeditaskid'],
-                                                                                newOpts=newOpts),
-                                     dataList)
+        elif taskIDs == "all":
+            dataList = pbookCore.show(status="finished", days=days, limit=limit, sync=True, format="json")
+            ret = list_parallel_exec(
+                lambda data: pbookCore.retry.original_func(pbookCore, data["jeditaskid"], newOpts=newOpts),
+                dataList,
+            )
         else:
-            print('Error: Invalid argument')
+            print("Error: Invalid argument")
             ret = None
         return ret
 
@@ -280,9 +288,9 @@ For more info, do help(show) for example
         if isinstance(taskIDs, (list, tuple)):
             ret = list_parallel_exec(lambda taskID: pbookCore.killAndRetry(taskID, newOpts=newOpts), taskIDs)
         elif isinstance(taskIDs, (int, long)):
-            ret = [ pbookCore.killAndRetry(taskIDs, newOpts=newOpts) ]
+            ret = [pbookCore.killAndRetry(taskIDs, newOpts=newOpts)]
         else:
-            print('Error: Invalid argument')
+            print("Error: Invalid argument")
             ret = None
         return ret
 
@@ -315,6 +323,17 @@ For more info, do help(show) for example
         """
         getUserJobMetadata(taskID, outputFileName)
 
+    # reload input dataset and retry
+    def reload_input(task_id):
+        """
+        Reload input dataset and retry the task with new contents. This is useful when input dataset contents are
+        changed after the task is submitted
+
+        example:
+          >>> reload_input(123)
+        """
+        pbookCore.reload_input(task_id)
+
     # recover lost files
     def recover_lost_files(taskID, test_mode=False):
         """
@@ -332,7 +351,7 @@ For more info, do help(show) for example
         Send a request to finish a workflow
 
         """
-        status, output = pbookCore.execute_workflow_command('finish', request_id)
+        status, output = pbookCore.execute_workflow_command("finish", request_id)
         if output:
             print(output[0][-1])
 
@@ -342,7 +361,7 @@ For more info, do help(show) for example
         Send a request to kill a workflow
 
         """
-        status, output = pbookCore.execute_workflow_command('abort', request_id)
+        status, output = pbookCore.execute_workflow_command("abort", request_id)
         if output:
             print(output[0][-1])
 
@@ -352,7 +371,7 @@ For more info, do help(show) for example
         Send a request to pause a workflow
 
         """
-        status, output = pbookCore.execute_workflow_command('suspend', request_id)
+        status, output = pbookCore.execute_workflow_command("suspend", request_id)
         if output:
             print(output[0][-1])
 
@@ -362,7 +381,7 @@ For more info, do help(show) for example
         Send a request to resume a workflow
 
         """
-        status, output = pbookCore.execute_workflow_command('resume', request_id)
+        status, output = pbookCore.execute_workflow_command("resume", request_id)
         if output:
             print(output[0][-1])
 
@@ -372,7 +391,7 @@ For more info, do help(show) for example
         Send a request to retry a workflow
 
         """
-        status, output = pbookCore.execute_workflow_command('retry', request_id)
+        status, output = pbookCore.execute_workflow_command("retry", request_id)
         if output:
             print(output[0][-1])
 
@@ -382,7 +401,7 @@ For more info, do help(show) for example
         Show a workflow
 
         """
-        status, output = pbookCore.execute_workflow_command('get_status', request_id)
+        status, output = pbookCore.execute_workflow_command("get_status", request_id)
         if output:
             print(output)
 
@@ -418,49 +437,177 @@ For more info, do help(show) for example
         """
         pbookCore.list_secrets(full)
 
+    # generate credential
+    def generate_credential():
+        """
+        Generate a new proxy or token
+
+        """
+        pbookCore.generate_credential()
+
+    main_locals = locals()
+
     # execute command in the batch mode
-    if comString != '':
+    if comString != "":
+        pbookCore.init()
         exec(comString) in globals(), locals()
         # exit
         if PBookCore.func_return_value:
             sys.exit(0)
         else:
             sys.exit(1)
-    main_locals = locals()
+
+    # execute with args in the batch mode
+    if args_list:
+        func_name = args_list.pop(0)
+        if func_name not in locals():
+            print("ERROR : function {0} is undefined".format(func_name))
+            sys.exit(1)
+
+        # convert arg string
+        def _conv_str(some_string):
+            if "," in some_string:
+                try:
+                    return [int(s) for s in some_string.split(",")]
+                except Exception:
+                    return some_string.split(",")
+            else:
+                if some_string == "None":
+                    return None
+                if some_string == "True":
+                    return True
+                if some_string == "False":
+                    return False
+                try:
+                    return int(some_string)
+                except Exception:
+                    return some_string
+
+        # separate args and kwargs
+        args = []
+        kwargs = {}
+        for arg in args_list:
+            if "=" in arg:
+                k, v = arg.split("=")
+                kwargs[k] = _conv_str(v)
+            else:
+                args.append(_conv_str(arg))
+        # execute
+        if func_name not in ["help", "generate_credential"]:
+            pbookCore.init(sanity_check=False)
+        locals()[func_name](*args, **kwargs)
+
+        # exit
+        if PBookCore.func_return_value:
+            sys.exit(0)
+        else:
+            sys.exit(1)
+
     # go to interactive prompt
-    code.interact(banner="\nStart pBook %s" % PandaToolsPkgInfo.release_version,
-                  local=locals())
+    pbookCore.init()
+    code.interact(banner="\nStart pBook %s" % PandaToolsPkgInfo.release_version, local=locals())
 
 
 # kill whole process
 def catch_sig(sig, frame):
     # cleanup
-    _onExit(tmpDir,historyFile)
+    _onExit(tmpDir, historyFile)
     # kill
-    commands_get_output('kill -9 -- -%s' % os.getpgrp())
+    commands_get_output("kill -9 -- -%s" % os.getpgrp())
 
 
 # overall main
 def main():
     # parse option
-    parser = argparse.ArgumentParser(conflict_handler="resolve")
-    parser.add_argument("-v",action="store_true",dest="verbose",default=False,
-                      help="Verbose")
-    parser.add_argument('-c',action='store',dest='comString',default='',type=str,
-                      help='Execute a command in the batch mode')
-    parser.add_argument("-3", action="store_true", dest="python3", default=False,
-                      help="Use python3")
-    parser.add_argument('--version',action='store_const',const=True,dest='version',default=False,
-                      help='Displays version')
-    parser.add_argument('--devSrv',action='store_const',const=True,dest='devSrv',default=False,
-                      help=argparse.SUPPRESS)
-    parser.add_argument('--intrSrv',action='store_const',const=True, dest='intrSrv',default=False,
-                      help=argparse.SUPPRESS)
-    # option for jupyter notebook
-    parser.add_argument('--prompt_with_newline', action='store_const', const=True, dest='prompt_with_newline',
-                        default=False, help=argparse.SUPPRESS)
+    usage = """
+    $ pbook [options] # interactive mode
+    $ pbook [options] command [args] [kwargs] # batch mode
+    
+    The same command can be executed in interactive mode:
+    
+    $ pbook
+    >>> command(*args, **kwargs) 
+    
+    or in batch mode:
 
-    options,args = parser.parse_known_args()
+    $ pbook command arg1 arg2 ... argN kwarg1=value1 kwarg2=value2 ... kwargN=valueN
+        
+    E.g.
+
+    $ pbook
+    >>> show(123, format='long', sync=True)
+    
+    is equivalent to    
+
+    $ pbook show 123 format='long' sync=True
+    
+    If arg or value is a list in interactive mode, it is represented as a comma-separate list in batch mode. E.g.
+    to kill three tasks in interactive mode:
+
+    $ pbook
+    >>> kill([123, 456, 789])
+    
+    or in batch mode:
+
+    $ pbook kill 123,456,789 
+    
+    To see the list of commands and help of each command,
+    
+    $ pbook
+    >>> help()
+    >>> help(command_name)
+    
+    or 
+    
+    $ pbook help
+    $ pbook help command_name
+    """
+    parser = argparse.ArgumentParser(conflict_handler="resolve", usage=usage)
+    parser.add_argument("-v", action="store_true", dest="verbose", default=False, help="Verbose")
+    parser.add_argument(
+        "-c",
+        action="store",
+        dest="comString",
+        default="",
+        type=str,
+        help="Execute a python code snippet",
+    )
+    parser.add_argument("-3", action="store_true", dest="python3", default=False, help="Use python3")
+    parser.add_argument(
+        "--version",
+        action="store_const",
+        const=True,
+        dest="version",
+        default=False,
+        help="Displays version",
+    )
+    parser.add_argument(
+        "--devSrv",
+        action="store_const",
+        const=True,
+        dest="devSrv",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--intrSrv",
+        action="store_const",
+        const=True,
+        dest="intrSrv",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+    # option for jupyter notebook
+    parser.add_argument(
+        "--prompt_with_newline",
+        action="store_const",
+        const=True,
+        dest="prompt_with_newline",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+
+    options, args = parser.parse_known_args()
 
     # display version
     if options.version:
@@ -483,20 +630,19 @@ def main():
         sys.exit(1)
     if fork_child_pid == 0:
         # main
-        # instantiate core
         if options.verbose:
             print(options)
         if options.prompt_with_newline:
             sys.ps1 = ">>> \n"
+        # instantiate core
         pbookCore = PBookCore.PBookCore(verbose=options.verbose)
-
-        # CUI
-        intmain(pbookCore,options.comString)
+        # execute
+        intmain(pbookCore, options.comString, args)
     else:
         # set handler
         signal.signal(signal.SIGINT, catch_sig)
         signal.signal(signal.SIGHUP, catch_sig)
-        signal.signal(signal.SIGTERM,catch_sig)
+        signal.signal(signal.SIGTERM, catch_sig)
         pid, status = os.wait()
         if os.WIFSIGNALED(status):
             sys.exit(-os.WTERMSIG(status))

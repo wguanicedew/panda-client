@@ -1,5 +1,96 @@
 ** Release Notes
 
+1.5.78
+  * protection against missing THistSvc
+
+1.5.77
+  * added --useNumFilesInSecDSsAsRatio to prun
+
+1.5.76
+  * For changes in ALRB_USER_PLATFORM
+  * execute_pchain in panda_api.py
+
+1.5.75
+  * warning message for missing nickname in IAM
+
+1.5.74
+  * added support for D2AODs in pathena
+
+1.5.73
+  * fixed module of JobSpec and FileSpec
+  * to allow main in --useAthenaTag
+  * improved pchain to set --useAthenaPackages automatically
+
+1.5.72
+  * fixed for OIDC
+
+1.5.71
+  * synchronous workflow submission
+
+1.5.70
+  * fixed FakeAppMgr for recent changes of AthAppMgr.OutStreamType
+
+1.5.69
+  * fixed _NativeClient
+
+1.5.68
+  * to throw an exception when unpicking is failed
+
+1.5.67
+  * added reload_input to pbook
+  * added memory warning and -y to pathena/prun
+
+1.5.66
+  * fixed FileSpec import
+
+1.5.65
+  * added --workflowName to pchain
+  * added n_try in a few functions in Client
+  * removal of symlink creation in build step
+  * added json serializable
+
+1.5.64
+  * fixed pyproject.toml
+  * improved various messages
+
+1.5.63
+  * to check python3 if python is missing
+
+1.5.62
+  * protection against non-ASCII args
+
+1.5.61
+  * fixed changes in 1.5.60
+
+1.5.60
+  * fixed pathena -c
+
+1.5.59
+  * added update_events and get_events_status
+
+1.5.58
+  * set modules for unpickling in client-light
+
+1.5.53
+  * regex in outputs of prun
+
+1.5.52
+  * added pyproject.toml
+  * introduced panda-client-light
+  * added get_files_in_datasets
+
+1.5.50
+  * to recreate cpack tarball for subsequent file appending as gzip -d is not enough
+
+1.5.49
+  * not to ignore tar failures
+  
+1.5.48
+  * pbook in batch mode
+
+1.5.47
+  * utilities for ID tokens
+
 1.5.46
   * to skip cpack if the user doesn't have own build dir
 
